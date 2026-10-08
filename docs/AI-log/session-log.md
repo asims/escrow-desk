@@ -253,3 +253,87 @@ Each user prompt is timestamped as it arrives; each agent turn ends with a short
 ## 2026-10-08 19:22:43 UTC
 
 **User:** we should commit and push too.
+
+**Kiro:** Committed and pushed requirements spec, updated steering, and session log to GitHub.
+**Decided:** none
+**Files changed:** none (git operations only)
+
+---
+
+## 2026-10-08 19:23:14 UTC
+
+**User:** okay, let's move on to design.
+
+**Kiro:** Wrote the full technical design document covering project structure, TypeScript data models, release state machine, business logic function signatures, Fed holiday API integration (Nager.Date), state management reducer, routing, seed data approach, and Cloudflare Workers deployment notes.
+**Decided:** Use Nager.Date API (no key required) for Fed holiday check; hash router for Cloudflare Workers static compatibility; fixed reference date for seed data stability.
+**Files changed:** .kiro/specs/escrow-desk/design.md
+
+---
+
+## 2026-10-08 19:27:05 UTC
+
+**User:** What happens if the holiday API is down or slow?
+
+**Kiro:** Explained the slow/down API handling gap — proposed a 3-second AbortController timeout, fallback-to-true behavior, loading spinner on the checklist item, and disabling Prepare Release while the check is pending; noted production would cache the holiday list.
+**Decided:** none — awaiting user go-ahead to update the design doc.
+**Files changed:** none
+
+---
+
+## 2026-10-08 19:27:39 UTC
+
+**User:** sure
+
+**Kiro:** Updated design doc with 3-second AbortController timeout, full businessDay.ts implementation sketch, fallback-to-true behavior, loading spinner on checklist business-day item, and disabled Prepare Release while check is pending.
+**Decided:** Fail open (assume business day) on timeout or API error; disable Prepare Release while loading.
+**Files changed:** .kiro/specs/escrow-desk/design.md
+
+---
+
+## 2026-10-08 19:28:36 UTC
+
+**User:** Where would a real wire processor connection plug in? Are we planning for the mock of the core or wire process to sit behind an interface we could swap?
+
+**Kiro:** Proposed a CoreBankingGateway interface with a MockCoreBankingGateway implementation, injected via context so a real wire processor can swap in without touching the reducer or UI; awaiting user go-ahead to add to the design doc.
+**Decided:** none — waiting on user confirmation.
+**Files changed:** none
+
+---
+
+## 2026-10-08 19:41:13 UTC
+
+**User:** Okay yes, let's add it to the design. That's what I was after but a few changes first 
+> 
+>  
+> 
+> I don't want the reducer making the call. Keep that pure. Call the gateway from an action or service then dispatch success or failure . We need to make sure that a release can't post twice so use the release ID as the item potency key and have the mock return the same confirmation if it's called again with the same key. That also means no `Date.now` in the reference. 
+> 
+>  
+> 
+> I'd frame this as posting to the core ledger, not submitting a wire, but posting is the core job. The wire is just one way the money goes out and we may add other rails later, something like post-release with the debit and credit entries 
+> 
+> Store amounts as integer cents, not floats.
+> 
+> Include the value date after the weekend and holiday adjustment 
+> 
+> And pick the gateway from an environment variable instead of hardcoding the mock in the main TSX 
+> 
+> Also let's make sure the mock fails on purpose for at least one seeded Escrow so the demo and the test can show the real error path 
+> 
+>  
+> 
+> Does any of that conflict with what's already in the design?
+
+**Kiro:** Analyzed conflicts between proposed gateway design and user's changes; identified 7 items to update — integer cents throughout, pure reducer with async action dispatching success/failure, value date on Release, env-var gateway selection, deterministic idempotency key, intentional failure seed scenario, and CoreLedgerGateway reframing. No direct conflicts with existing design.
+**Decided:** All 7 changes confirmed; awaiting user go-ahead to write into design doc.
+**Files changed:** none
+
+---
+
+## 2026-10-08 19:41:33 UTC
+
+**User:** yes
+
+## 2026-10-08 19:41:41 UTC
+
+**User:** let's commit the design and push

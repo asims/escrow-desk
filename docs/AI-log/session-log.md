@@ -337,3 +337,67 @@ Each user prompt is timestamped as it arrives; each agent turn ends with a short
 ## 2026-10-08 19:41:41 UTC
 
 **User:** let's commit the design and push
+
+**Kiro:** Updated design doc with all 7 gateway changes — integer cents throughout, CoreLedgerGateway interface, pure reducer with async actions, idempotent mock with deterministic ref, VITE_CORE_GATEWAY env var, valueDate with nextBusinessDay helper, scenario 11 for intentional failure — then committed and pushed.
+**Decided:** All monetary fields use integer cents; gateway framed as core ledger post not wire submission; reducer stays pure; mock fails deterministically on MOCK_FAILURE_RELEASE_IDS.
+**Files changed:** .kiro/specs/escrow-desk/design.md, docs/AI-log/session-log.md (git push)
+
+---
+
+## 2026-10-08 19:47:24 UTC
+
+**User:** I keep coming back to that. I know that our POC is not going to have a backend but I want to make sure the design shows how the real thing would run.
+> 
+> Should we create something, maybe keeping it to a couple of brief pages, a diagram, and a few bullets, that shows how, in the real product, escrow can sit for a year or more waiting on dates, signatures, and approvals?
+> 
+> I think we mentioned earlier I'd normally run that as a durable workflow like Temporal or step functions. I know we're not building that but do we show sufficient information anywhere on how future production versions would work or should I keep that out? 
+> 
+>  
+> 
+> if it helps this is the prompt for the excercise. perhaps we put these items into the readme?
+> 
+>  
+> 
+> ### 1. Kiro Spec Artifacts
+> 
+> Your project should include spec artifacts generated through Kiro's spec workflow — each containing requirements, design, and tasks. How you organize your specs — whether as a single feature or multiple increments — is a product decision.
+> 
+> We will review the spec quality as heavily as the code. These should reflect your product thinking — not just a restatement of this brief.
+> 
+> ### 2. AI Collaboration Context
+> 
+> We need to understand how you worked with AI throughout this exercise. Context is critical — we want to see your thought process, decisions, and iterations as they happened.
+> 
+> **Important:** Set up a Kiro hook to capture session context and collaboration history automatically. This gives us insight into how you actually work with AI — the prompts you write, the decisions you make, and how you iterate. How you structure and organize that captured context is up to you, but it should tell the story of your development process in real time, not as an after-the-fact summary.
+> 
+> ### 3. A Working Application
+> 
+> It must run. Technology stack is your choice. For anything with a front-end, design and user experience matter — we're evaluating product thinking, and that includes how the experience looks and feels, not just whether it functions.
+> 
+> ### 4. A README.md
+> 
+> - What you built and why — what problem does it solve? Who is the user?
+> 
+> - Which APIs you integrated and how they serve the product
+> 
+> - How to run it locally (and link to live demo if hosted)
+> 
+> - Product decisions you made and your reasoning
+> 
+> - What you would change or add with more time
+> 
+>  
+> 
+>  
+> 
+> We should note wherever it's appropriate that I did work with Claude to think through a couple of different potential application ideas. This was the idea or scope that came to mind as something I'm familiar enough with and that might be unique that back-office cores don't do today
+
+**Kiro:** Discussed production architecture documentation and README strategy; proposed creating docs/production-architecture.md (durable workflow shape, diagram, PoC-to-production mapping) and README.md (covering all 4 brief requirements including honest AI collaboration note); awaiting user go-ahead to draft both.
+**Decided:** README is the right home for brief requirements; production architecture gets its own doc in docs/; both link together.
+**Files changed:** none
+
+---
+
+## 2026-10-08 19:48:04 UTC
+
+**User:** please do!

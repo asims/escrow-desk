@@ -1,0 +1,14 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Log User Prompt",
+      "trigger": "UserPromptSubmit",
+      "description": "Appends each user prompt with a timestamp to docs/AI-log/session-log.md",
+      "action": {
+        "type": "command",
+        "command": "node -e \"\nconst fs = require('fs');\nconst path = require('path');\nlet input = '';\nprocess.stdin.on('data', d => input += d);\nprocess.stdin.on('end', () => {\n  const ctx = JSON.parse(input);\n  const ws = ctx.workspacePath || ctx.workspaceFolder || ctx.workspace || process.env.WORKSPACE || '/Users/asims/Code/escrow-desk';\n  const logPath = path.join(ws, 'docs/AI-log/session-log.md');\n  const ts = new Date().toISOString().replace('T', ' ').slice(0, 19) + ' UTC';\n  const prompt = (ctx.userPrompt || ctx.prompt || '').replace(/\\n/g, '\\n> ');\n  const entry = '\\n## ' + ts + '\\n\\n**User:** ' + prompt + '\\n';\n  fs.appendFileSync(logPath, entry);\n});\n\"\n"
+      }
+    }
+  ]
+}

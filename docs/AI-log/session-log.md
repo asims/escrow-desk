@@ -401,3 +401,43 @@ Each user prompt is timestamped as it arrives; each agent turn ends with a short
 ## 2026-10-08 19:48:04 UTC
 
 **User:** please do!
+
+**Kiro:** Wrote README.md (covering all 4 brief requirements including honest AI collaboration note) and docs/production-architecture.md (durable workflow diagram, activity table, idempotency design, PoC-to-production mapping); committed and pushed both.
+**Decided:** README links to production architecture doc; AI collaboration section is honest about Claude for ideation and Kiro for spec/build; session log cited as real-time evidence.
+**Files changed:** README.md, docs/production-architecture.md
+
+---
+
+## 2026-10-08 19:52:21 UTC
+
+**User:** At what point, working with Kiro, do I actually see UIs and get to start providing UI feedback? Is that in implementation?
+
+**Kiro:** Explained that UI feedback happens during implementation when the dev server runs, but offered to sketch wireframes now for the dashboard and escrow detail/release tab before writing tasks; recommended wireframes first given the time constraint and UX evaluation criteria.
+**Decided:** none — awaiting user decision on wireframes vs. build-first.
+**Files changed:** none
+
+---
+
+## 2026-10-08 19:52:47 UTC
+
+**User:** yes, that sounds great
+
+**Kiro:** Created 3 HTML wireframes — Dashboard (morning view with urgency buckets), Escrow Detail Release tab (all-clear state), and Escrow Detail blocked by disputed claim; user approved direction and asked to see wire-pending state before implementation.
+**Decided:** Dense tabular banking aesthetic confirmed; checklist + amount breakdown + single action pattern confirmed for release tab.
+**Files changed:** none (artifacts only)
+
+---
+
+## 2026-10-08 21:22:46 UTC
+
+**User:** Should I nitpick on these or just review the overall design direction?
+
+**Kiro:** Created wire-pending wireframe showing purple state, production seam banner, masked wire instructions, approval snapshot, lock notice, and supervisor-only confirm button; advised user to focus on overall direction rather than nitpicks at this stage.
+**Decided:** Pixel-level feedback deferred to first live build; direction review covers layout, hierarchy, release flow, and wire pending screen utility.
+**Files changed:** none (artifacts only)
+
+---
+
+## 2026-10-08 21:26:39 UTC
+
+**User:** Yeah I think so. The design direction overall seems okay. I won't nitpic.

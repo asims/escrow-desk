@@ -5,8 +5,11 @@ import { REFERENCE_DATE } from '../../data/seed';
 import type { Escrow } from '../../types';
 import { computeReleasableAmount } from '../../lib/balance';
 import { governingReleaseDate } from '../../lib/escrowView';
+import { sortEscrows } from '../../lib/sortEscrows';
+import { useSortState } from '../../lib/useSortState';
 import { MoneyAmount } from '../shared/MoneyAmount';
 import { StatusBadge } from '../shared/StatusBadge';
+import { SortableHeader } from '../shared/SortableHeader';
 
 const ASOF = REFERENCE_DATE;
 
@@ -31,9 +34,12 @@ export function EscrowList() {
   const { store } = useEscrow();
   const navigate = useNavigate();
   const [filter, setFilter] = useState<Filter>('all');
+  // Default sort: soonest/overdue release date first.
+  const sort = useSortState('releaseDate', 'asc');
 
   const active = FILTERS.find((f) => f.key === filter)!;
-  const rows = store.escrows.filter(active.match);
+  const filtered = store.escrows.filter(active.match);
+  const rows = sortEscrows(filtered, sort.key, sort.direction, ASOF);
 
   return (
     <div className="space-y-4">
@@ -67,12 +73,44 @@ export function EscrowList() {
         <table className="w-full border-collapse text-sm">
           <thead>
             <tr className="border-b border-gray-200 text-left text-xs text-gray-500">
-              <th className="px-3 py-2 font-medium">Escrow</th>
+              <SortableHeader
+                label="Escrow"
+                sortKey="name"
+                activeKey={sort.key}
+                direction={sort.direction}
+                onSort={sort.onSort}
+              />
               <th className="px-3 py-2 font-medium">Parties</th>
-              <th className="px-3 py-2 text-right font-medium">Balance</th>
-              <th className="px-3 py-2 text-right font-medium">Releasable</th>
-              <th className="px-3 py-2 font-medium">Release Date</th>
-              <th className="px-3 py-2 font-medium">Status</th>
+              <SortableHeader
+                label="Balance"
+                sortKey="balance"
+                activeKey={sort.key}
+                direction={sort.direction}
+                onSort={sort.onSort}
+                align="right"
+              />
+              <SortableHeader
+                label="Releasable"
+                sortKey="releasable"
+                activeKey={sort.key}
+                direction={sort.direction}
+                onSort={sort.onSort}
+                align="right"
+              />
+              <SortableHeader
+                label="Release Date"
+                sortKey="releaseDate"
+                activeKey={sort.key}
+                direction={sort.direction}
+                onSort={sort.onSort}
+              />
+              <SortableHeader
+                label="Status"
+                sortKey="status"
+                activeKey={sort.key}
+                direction={sort.direction}
+                onSort={sort.onSort}
+              />
             </tr>
           </thead>
           <tbody>

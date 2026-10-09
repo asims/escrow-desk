@@ -84,7 +84,12 @@ describe('End-to-end seed scenarios (Task 20)', () => {
     const e = get(store, 'ESC-010');
     expect(e.releaseSchedule).toHaveLength(2);
     expect(e.ledger.some((l) => l.type === 'partial-disbursement')).toBe(true);
-    expect(e.currentBalanceCents).toBe(40000000);
+    // $40M remained after the first tranche; monthly 4.5% interest has since
+    // compounded the balance above that base. The ledger reconciles exactly.
+    expect(e.currentBalanceCents).toBe(44503503);
+    expect(e.currentBalanceCents).toBeGreaterThan(40000000);
+    const last = e.ledger[e.ledger.length - 1];
+    expect(last.runningBalanceCents).toBe(e.currentBalanceCents);
   });
 
   it('ESC-011 Gateway failure — approve path fails and release stays pending-approval', async () => {

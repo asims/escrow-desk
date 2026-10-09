@@ -32,6 +32,145 @@ function buildLedger(
   });
 }
 
+/** A ledger entry before id/runningBalance are assigned. */
+type RawEntry = Omit<LedgerEntry, 'id' | 'runningBalanceCents'>;
+
+/**
+ * Advance a UTC date by `n` whole months, clamping the day-of-month to the end
+ * of the target month (e.g. opened on the 31st rolls to the 28th/30th).
+ */
+function addMonthsUtc(base: Date, n: number): Date {
+  const d = new Date(base.getTime());
+  const targetMonth = d.getUTCMonth() + n;
+  const result = new Date(
+    Date.UTC(
+      d.getUTCFullYear(),
+      targetMonth,
+      1,
+      d.getUTCHours(),
+      d.getUTCMinutes(),
+      d.getUTCSeconds(),
+    ),
+  );
+  // Clamp the day to the last valid day of the resulting month.
+  const lastDay = new Date(
+    Date.UTC(result.getUTCFullYear(), result.getUTCMonth() + 1, 0),
+  ).getUTCDate();
+  result.setUTCDate(Math.min(base.getUTCDate(), lastDay));
+  return result;
+}
+
+/**
+ * Interleave monthly interest credits and annual admin-fee debits into an
+ * escrow's base ledger, then recompute every running balance so the whole
+ * ledger reconciles chronologically. Returns a NEW escrow with the finalized
+ * ledger and a matching currentBalanceCents.
+ *
+ * Formulas mirror the business-logic layer exactly:
+ *  - Monthly interest = Math.round(balanceAtThatTime * annualInterestRate / 12),
+ *    compounding (each credit raises the base for the next month).
+ *  - Annual fee = -annualAdminFeeCents on each anniversary of the opened date.
+ *
+ * For a closed escrow the terminal disbursement is recomputed so the ledger
+ * drains to exactly zero after interest and fees — a closed escrow must end at
+ * a zero balance, and that final wire is whatever drains the remaining funds.
+ */
+function finalizeEscrow(escrow: Escrow): Escrow {
+  const opened = new Date(`${escrow.openedDate}T00:00:00Z`);
+
+  // Interest and fees accrue up to "today" for a live escrow, but only up to
+  // closure for one that has already been fully disbursed.
+  let horizon = REFERENCE_DATE;
+  if (escrow.status === 'closed') {
+    const closingEntry = [...escrow.ledger]
+      .reverse()
+      .find(
+        (e) =>
+          e.type === 'final-disbursement' ||
+          e.type === 'partial-disbursement',
+      );
+    if (closingEntry) horizon = new Date(closingEntry.timestamp);
+  }
+
+  // Base entries are everything the scenario authored except interest/fees,
+  // which we regenerate here so there is a single source of truth.
+  const base: RawEntry[] = escrow.ledger
+    .filter(
+      (e) => e.type !== 'interest-credit' && e.type !== 'annual-fee-debit',
+    )
+    .map(({ id: _id, runningBalanceCents: _rb, ...rest }) => rest);
+
+  // Monthly interest-credit events (empty for a zero-rate escrow).
+  const interestEvents: RawEntry[] = [];
+  if (escrow.annualInterestRate > 0) {
+    for (let m = 1; ; m += 1) {
+      const when = addMonthsUtc(opened, m);
+      if (when > horizon) break;
+      interestEvents.push({
+        type: 'interest-credit',
+        amountCents: 0, // Filled in during the balance walk below.
+        timestamp: when.toISOString(),
+        actorRole: 'officer',
+        note: `Interest credit (${(escrow.annualInterestRate * 100).toFixed(
+          2,
+        )}% annual) to ${escrow.interestBeneficiary}`,
+      });
+    }
+  }
+
+  // Annual admin-fee events on each anniversary of the opened date.
+  const feeEvents: RawEntry[] = [];
+  if (escrow.annualAdminFeeCents > 0) {
+    for (let y = 1; ; y += 1) {
+      const when = addMonthsUtc(opened, y * 12);
+      if (when > horizon) break;
+      feeEvents.push({
+        type: 'annual-fee-debit',
+        amountCents: -escrow.annualAdminFeeCents,
+        timestamp: when.toISOString(),
+        actorRole: 'officer',
+        note: `Year ${y} administration fee`,
+      });
+    }
+  }
+
+  // Merge and sort chronologically. Interest/fee events land at the start of
+  // their day (00:00:00Z), so a same-day disbursement (recorded later in the
+  // day) settles after that day's interest has already been credited.
+  const merged = [...base, ...interestEvents, ...feeEvents].sort((a, b) =>
+    a.timestamp.localeCompare(b.timestamp),
+  );
+
+  // A closed escrow must drain to zero: its terminal disbursement absorbs
+  // whatever balance remains after interest and fees are applied.
+  const terminalDisbursementIdx =
+    escrow.status === 'closed'
+      ? merged.map((e) => e.type).lastIndexOf('final-disbursement')
+      : -1;
+
+  // Walk the timeline, computing compounding interest off the running balance
+  // and assigning each entry its running balance.
+  let running = 0;
+  const ledger: LedgerEntry[] = merged.map((entry, i) => {
+    let amountCents = entry.amountCents;
+    if (entry.type === 'interest-credit') {
+      amountCents = Math.round((running * escrow.annualInterestRate) / 12);
+    } else if (i === terminalDisbursementIdx) {
+      // Disburse exactly the remaining balance so the escrow closes at zero.
+      amountCents = -running;
+    }
+    running += amountCents;
+    return {
+      ...entry,
+      amountCents,
+      id: `${entry.type}-${i}`,
+      runningBalanceCents: running,
+    };
+  });
+
+  return { ...escrow, ledger, currentBalanceCents: running };
+}
+
 function signer(id: string, name: string, title: string): Signer {
   return { id, name, title };
 }
@@ -911,21 +1050,70 @@ function esc011(): Escrow {
  * Build a fresh in-memory store. Each call returns deep-fresh objects, so the
  * RESET action restores the original seed state cleanly.
  */
+/**
+ * After interest/fees have grown an escrow's balance, re-point the scenario
+ * fields that are defined relative to that balance so each scenario still
+ * behaves as named.
+ *
+ *  - ESC-003 (fully blocked): the open claim must still reserve the entire
+ *    balance, so bump the claimed amount to the finalized gross balance.
+ *  - ESC-008 (wire pending): the pending release — and its approval snapshot —
+ *    must still drain the full balance so confirmation closes the escrow.
+ */
+function reconcileScenarioFields(escrow: Escrow): Escrow {
+  if (escrow.id === 'ESC-003' && escrow.claims.length > 0) {
+    const balance = escrow.currentBalanceCents;
+    const claim = escrow.claims[0];
+    return {
+      ...escrow,
+      claims: [{ ...claim, claimedAmountCents: balance }],
+    };
+  }
+
+  if (escrow.id === 'ESC-008' && escrow.releases.length > 0) {
+    const balance = escrow.currentBalanceCents;
+    const release = escrow.releases[0];
+    const releasable = balance - escrow.wireFeeCents;
+    return {
+      ...escrow,
+      releases: [
+        {
+          ...release,
+          amountCents: balance,
+          snapshot: release.snapshot
+            ? {
+                ...release.snapshot,
+                balanceCents: balance,
+                releasableAmountCents: releasable,
+              }
+            : release.snapshot,
+        },
+      ],
+    };
+  }
+
+  return escrow;
+}
+
 export function createSeedStore(): EscrowStore {
+  const escrows = [
+    esc001(),
+    esc002(),
+    esc003(),
+    esc004(),
+    esc005(),
+    esc006(),
+    esc007(),
+    esc008(),
+    esc009(),
+    esc010(),
+    esc011(),
+  ]
+    .map(finalizeEscrow)
+    .map(reconcileScenarioFields);
+
   return {
-    escrows: [
-      esc001(),
-      esc002(),
-      esc003(),
-      esc004(),
-      esc005(),
-      esc006(),
-      esc007(),
-      esc008(),
-      esc009(),
-      esc010(),
-      esc011(),
-    ],
+    escrows,
     currentRole: 'officer',
   };
 }

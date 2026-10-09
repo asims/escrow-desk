@@ -48,4 +48,55 @@ describe('createSeedStore', () => {
     expect(esc009.status).toBe('closed');
     expect(esc009.currentBalanceCents).toBe(0);
   });
+
+  it('every ledger reconciles: final running balance equals currentBalance', () => {
+    for (const e of createSeedStore().escrows) {
+      let running = 0;
+      for (const entry of e.ledger) {
+        running += entry.amountCents;
+        expect(entry.runningBalanceCents).toBe(running);
+      }
+      expect(e.currentBalanceCents).toBe(running);
+    }
+  });
+
+  it('interest-bearing escrows accrue monthly interest credits (REQ-8.1)', () => {
+    const interestBearing = createSeedStore().escrows.filter(
+      (e) => e.annualInterestRate > 0,
+    );
+    expect(interestBearing.length).toBeGreaterThan(0);
+    for (const e of interestBearing) {
+      const credits = e.ledger.filter((l) => l.type === 'interest-credit');
+      expect(credits.length).toBeGreaterThan(0);
+      // Each monthly credit = round(prior running balance * rate / 12).
+      for (const c of credits) {
+        expect(c.amountCents).toBeGreaterThan(0);
+        const prior = c.runningBalanceCents - c.amountCents;
+        expect(c.amountCents).toBe(
+          Math.round((prior * e.annualInterestRate) / 12),
+        );
+      }
+    }
+  });
+
+  it('non-interest-bearing escrows have no interest credits (REQ-8.4)', () => {
+    const zeroRate = createSeedStore().escrows.filter(
+      (e) => e.annualInterestRate === 0,
+    );
+    expect(zeroRate.length).toBeGreaterThan(0);
+    for (const e of zeroRate) {
+      expect(e.ledger.some((l) => l.type === 'interest-credit')).toBe(false);
+    }
+  });
+
+  it('every escrow records annual admin fee debits on anniversaries (REQ-8.2)', () => {
+    for (const e of createSeedStore().escrows) {
+      if (e.annualAdminFeeCents <= 0) continue;
+      const fees = e.ledger.filter((l) => l.type === 'annual-fee-debit');
+      expect(fees.length).toBeGreaterThan(0);
+      for (const f of fees) {
+        expect(f.amountCents).toBe(-e.annualAdminFeeCents);
+      }
+    }
+  });
 });

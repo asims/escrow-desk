@@ -2,6 +2,8 @@
 
 A proof-of-concept workflow tool for a bank escrow officer managing indemnity holdback escrows on commercial M&A deals.
 
+**Live demo:** https://escrow-desk.abby-sims-account.workers.dev
+
 ---
 
 ## What It Is and Why
@@ -75,7 +77,7 @@ pnpm build
 pnpm run deploy
 ```
 
-Requires `wrangler` and a Cloudflare account. The app deploys as a static site — no server-side logic.
+Requires `wrangler` and a Cloudflare account. The app deploys as a static site — no server-side logic. The live deployment is at https://escrow-desk.abby-sims-account.workers.dev
 
 ---
 

@@ -1464,3 +1464,31 @@ Each user prompt is timestamped as it arrives; each agent turn ends with a short
 ## 2026-10-09 01:37:58 UTC
 
 **User:** B
+
+**Kiro:** Added wrangler to devDependencies and installed it; user was already Cloudflare-authenticated; verified 91/91 tests, built, and deployed to Cloudflare Workers at https://escrow-desk.abby-sims-account.workers.dev. Confirmed HTTP 200 and working SPA fallback, updated README with the live URL, and pushed (f228547).
+**Decided:** Deployed via Path B (user pre-authenticated). All four exercise deliverables now in place. Reducer purity nit remains optional/open.
+**Files changed:** package.json, pnpm-lock.yaml, README.md, docs/AI-log/session-log.md
+
+---
+
+**Kiro:** No new work this turn — the deploy and README update were completed and logged in the prior turn. Awaiting the user's decision on the optional reducer purity cleanup or wrapping up.
+**Decided:** none
+**Files changed:** none
+
+---
+
+## 2026-10-09 01:40:41 UTC
+
+**User:** call it done
+
+**Kiro:** Exercise complete. Stopped the dev server and wrapped up. Final state: live at https://escrow-desk.abby-sims-account.workers.dev, repo at https://github.com/asims/escrow-desk, 91 tests passing, all 4 deliverables (spec, AI log, working app, README) in place.
+**Decided:** Skipping the optional reducer purity nit — not worth the commit for a non-blocking finding that never fires in practice.
+**Files changed:** none
+
+---
+
+**Kiro:** Final wrap turn — committing and pushing the outstanding session-log entries so the repo is clean. No code changes.
+**Decided:** none
+**Files changed:** docs/AI-log/session-log.md
+
+---
